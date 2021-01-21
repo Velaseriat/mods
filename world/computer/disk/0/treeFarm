@@ -1,0 +1,449 @@
+----------------------
+-- GLOBAL VARIABLES --
+----------------------
+
+-- Handle Script Arguments
+arg = ...
+selectedTurtle = -1
+
+if arg == "red"
+then
+    selectedTurtle = 1
+elseif arg == "blue"
+then
+    selectedTurtle = 2
+elseif arg == "white"
+then
+    selectedTurtle = 3
+end
+
+-- Tree Position Coordinates
+-- This is not x,y,z in minecraft coords
+-- These are relative to each tree being
+-- a point
+xPos=0
+yPos=0
+
+-- Should break blocks when moving
+shouldBreak = false
+
+---------------
+-- FUNCTIONS --
+---------------
+
+-- Safely move in a particular direction
+function safeForward(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.forward() do 
+            if turtle.detect() and shouldBreak
+            then
+                turtle.dig()
+            end
+        end
+    end
+end
+
+-- Move upwards safely
+function safeUp(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.up() do
+            if turtle.detect() and shouldBreak
+            then
+                turtle.digUp()
+            end
+        end
+    end
+end
+
+-- Move down safely
+function safeDown(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.down() do
+            if turtle.detect() and shouldBreak
+            then
+                turtle.digDown()
+            end
+        end
+    end
+end
+
+-- Move backwards safely
+function safeBack(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.back() do
+            turtle.turnLeft()
+            turtle.turnLeft()
+            if turtle.detect() and shouldBreak 
+            then
+                turtle.dig()
+            end
+            turtle.turnLeft()
+            turtle.turnLeft()
+        end
+    end
+end
+
+function compareToSlot(slot)
+    turtle.select(slot)
+    local output = turtle.compare()
+    turtle.select(1)
+    return output
+end
+
+function returnAndRestock()
+    returnToStart()
+    restockSaplings()
+    returnToPosition()
+end
+
+function plantSapling()
+    printStatus("plantSapling()")
+    turtle.select(1)
+    
+    -- block until you recieve saplings
+    if turtle.getItemCount(1) == 1
+    then
+        returnAndRestock()
+    end 
+    turtle.place()
+end
+
+-- Cut a tree
+function cutTree()
+    printStatus("cutTree()")
+    local isTree = compareToSlot(2)
+    if isTree
+    then
+        turtle.dig() 
+        cleanPlatforms()
+    end
+    if not turtle.detect()
+    then
+        plantSapling()
+    end
+end
+
+-- Suck and move with turtle
+function suckWalk(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        turtle.suckUp()
+        turtle.suck()
+        safeForward()
+    end
+end
+
+function circleSuck()
+    for i=1,4,1
+    do
+        turtle.suck()
+        turtle.turnLeft()
+    end
+    turtle.suck()
+end
+-- Suck up items in the general area
+function cleanPlatforms()
+    printStatus("cleanPlatforms()")
+    turtle.select(1)
+    circleSuck()
+    turtle.turnLeft()
+    suckWalk()
+    circleSuck()
+    suckWalk()
+    circleSuck()
+    safeBack(4)
+    circleSuck()
+    suckWalk()
+    circleSuck()
+    suckWalk()
+    turtle.turnRight()
+    turtle.suck()
+end
+
+function emptyInventory()
+    printStatus("emptyInventory()")
+    emptyAllButOne(2)
+    for i=3,16,1
+    do
+        emptyAll(i)
+    end
+    turtle.select(1)
+end
+
+
+-- Empty all but 1 item in slot
+function emptyAllButOne(slotNumber)
+    turtle.select(slotNumber)
+    turtle.dropDown(turtle.getItemCount(slotNumber)-1)
+end
+
+-- Empty entire slot
+function emptyAll(slotNumber)
+    turtle.select(slotNumber)
+    turtle.dropDown()
+end
+
+-- Cut row of trees
+function cutRow()
+    printStatus("cutRow()")
+    turtle.select(1)
+    for i=1,10,1 
+    do
+        xPos=i
+        local shouldEmpty = compareToSlot(2)
+        cutTree()
+        turtle.turnRight()
+        suckWalk(2)
+        turtle.turnLeft()
+        if i~=10 and shouldEmpty 
+        then
+            emptyInventory()
+        end
+    end
+    turtle.turnRight()
+    safeBack(20)
+    turtle.turnLeft()
+    emptyInventory()
+    xPos = 1
+end
+
+-- Farm entire plot 
+-- NOTE: Range is [startRow,endRow] (max is 27)
+function farmWholePlot()
+    printStatus("farmWholePlot()")
+    for i=getStartRange(),getEndRange(),1
+    do
+        yPos=i
+        cutRow()
+        if i~=getEndRange()
+        then
+            alignNextRow()
+        end
+    end    
+end
+
+-- Position for next row
+function alignNextRow()
+    printStatus("alignNextRow()")
+    turtle.select(1)
+    turtle.turnLeft()
+    suckWalk(1)
+    turtle.turnRight()
+    suckWalk(2)
+    turtle.turnRight()
+    suckWalk(1)
+    turtle.turnLeft()
+    xPos=1
+end
+
+-- Return to start based on xPos and yPos
+-- Offset is which turtle: 1=right 2=top 3=left
+function returnToStart()
+    printStatus("returnToStart()")
+    -- Get to corner (ontop of ladder)
+    turtle.turnLeft()
+    safeForward(xPos*2-1)
+    
+    -- Offset for which turtle is going
+    safeForward(selectedTurtle)
+    
+    turtle.turnLeft()
+    safeForward(yPos*2-2)
+    
+    -- Go back to cubby
+    returnToCubby()
+end
+
+-- Return to cubby
+function returnToCubby()
+    if selectedTurtle == 1
+    then
+        safeForward()
+        turtle.turnLeft()
+        safeForward(3)
+        turtle.turnLeft()
+        safeBack(3)
+    elseif selectedTurtle == 2
+    then
+        safeForward(2)
+        turtle.turnLeft()
+        safeForward(3)
+        turtle.turnLeft()
+        safeBack()
+        safeUp()
+        safeBack()
+    elseif selectedTurtle == 3
+    then
+        safeForward(3)
+        turtle.turnLeft()
+        safeForward(3)
+        turtle.turnLeft()
+        safeBack()
+    end 
+end
+
+-- Leave the cubby
+function leaveTheCubby()
+    if selectedTurtle == 1
+    then
+        safeForward(3)
+        turtle.turnLeft()
+        safeForward(3)
+        turtle.turnRight()
+        safeForward()    
+    elseif selectedTurtle == 2
+    then
+        safeForward()
+        safeDown()
+        safeForward(1)
+        turtle.turnLeft()
+        safeForward(3)
+        turtle.turnRight()
+        safeForward(2)
+    elseif selectedTurtle == 3
+    then
+        safeForward()
+        turtle.turnLeft()
+        safeForward(3)
+        turtle.turnRight()
+        safeForward(3)    
+    end
+end
+
+-- Return to xPos and yPos position
+function returnToPosition()
+    printStatus("returnToPosition()")
+    leaveTheCubby()
+    safeForward(yPos*2-2)
+    turtle.turnRight()
+    safeForward(selectedTurtle)
+    safeForward(xPos*2-1)
+    turtle.turnLeft()
+end
+
+-- Restock saplings
+function restockSaplings()
+    printStatus("restockSaplings()")
+    turtle.select(1)
+    
+    if selectedTurtle == 1
+    then
+        safeBack(3)
+        turtle.turnLeft()
+        safeForward(5)
+        turtle.turnLeft()
+        safeForward()
+        turtle.turnRight()
+        safeForward()
+        safeUp()
+        turtle.turnRight()
+        turtle.suck(63)
+        turtle.turnLeft()
+        safeDown()
+        safeBack()
+        turtle.turnLeft()
+        safeBack()
+        turtle.turnRight()
+        safeBack(5)
+        turtle.turnRight()
+        safeForward(3)
+    elseif selectedTurtle == 2
+    then
+        safeBack(3)
+        turtle.turnLeft()
+        safeForward(4)
+        turtle.suck(63)
+        safeBack(4)
+        turtle.turnRight()
+        safeForward(3)
+    elseif selectedTurtle == 3
+    then
+        safeBack(2)
+        turtle.turnLeft()
+        safeForward(4)
+        safeUp()
+        turtle.turnLeft()
+        turtle.suck(63)
+        turtle.turnRight()
+        safeDown()
+        safeBack(4)
+        turtle.turnRight()
+        safeForward(2)
+    end
+end
+
+
+-- Argument generation
+function getStartRange()
+    if selectedTurtle == 1
+    then
+        return 1    
+    elseif selectedTurtle == 2
+    then
+        return 10
+    elseif selectedTurtle == 3
+    then
+        return 19
+    end
+end
+
+function getEndRange()
+    if selectedTurtle == 1
+    then
+        return 9
+    elseif selectedTurtle == 2
+    then
+        return 18
+    elseif selectedTurtle == 3
+    then
+        return 27
+    end
+end
+
+--One iteration of the whole farm
+function treeFarm()
+    printStatus("treeFarm()")
+    restockSaplings()
+    xPos = 1
+    yPos = getStartRange()
+    returnToPosition()
+    farmWholePlot()
+    returnToStart()
+end
+
+-- Print current position and status
+function printStatus(status)
+    term.clear()
+    print("Current Position:\n\tX: " .. xPos .. "\tY: " .. yPos .. "\n")
+    print("Status: " .. status)
+end
+
+
+--DEBUG--
+function debugMain()
+    printStatus("debugMain()")
+    restockSaplings()
+end
+
+--MAIN--
+function main()
+    printStatus("main()")
+    while true
+    do
+        printStatus("Starting iteration...")
+        treeFarm()
+        printStatus("Finished iteration!")
+    end
+end
+
+main()
+--debugMain()

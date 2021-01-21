@@ -1,0 +1,166 @@
+----------------------
+-- GLOBAL VARIABLES --
+----------------------
+
+-- Handle Script Arguments
+arg = ...
+
+---------------
+-- FUNCTIONS --
+---------------
+
+-- Safely move in a particular direction
+function safeForward(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.forward() do 
+            if turtle.detect() and shouldBreak
+            then
+                turtle.dig()
+            end
+        end
+    end
+end
+
+-- Move upwards safely
+function safeUp(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.up() do
+            if turtle.detect() and shouldBreak
+            then
+                turtle.digUp()
+            end
+        end
+    end
+end
+
+-- Move down safely
+function safeDown(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.down() do
+            if turtle.detect() and shouldBreak
+            then
+                turtle.digDown()
+            end
+        end
+    end
+end
+
+-- Move backwards safely
+function safeBack(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.back() do
+            turtle.turnLeft()
+            turtle.turnLeft()
+            if turtle.detect() and shouldBreak 
+            then
+                turtle.dig()
+            end
+            turtle.turnLeft()
+            turtle.turnLeft()
+        end
+    end
+end
+
+-- Print current status
+function printStatus(status)
+    term.clear()
+    print("Status: " .. status)
+end
+
+-- Deploy water
+function deployWater()
+    printStatus("deployWater()")
+    for i=1,2,1 do
+        rs.setOutput("right", true)
+        sleep(1.5)
+        rs.setOutput("right", false)
+        sleep(1.5)
+    end
+end
+
+-- Generate the obsidian
+function generateObsidian()
+    printStatus("generateObsidian()")
+    deployWater()
+end
+
+function harvestRow(length)
+    for i=1,length,1 do
+        turtle.digDown()
+        safeForward()
+    end
+    turtle.digDown()
+end
+
+-- Mine the obsidian
+function mineObsidian()
+    printStatus("mineObsidian()")
+    safeForward()
+    turtle.turnLeft()
+    harvestRow(4)
+    turtle.turnRight()
+    safeForward()
+    turtle.turnRight()
+    harvestRow(4)
+    turtle.turnLeft()
+    safeForward(3)
+    turtle.turnLeft()
+    harvestRow(4)
+    turtle.turnLeft()
+    safeForward()
+    turtle.turnLeft()
+    harvestRow(4)
+    turtle.turnRight()
+    safeForward()
+    turtle.turnRight()
+    harvestRow(1)
+    turtle.turnRight()
+    safeForward()
+    turtle.turnLeft()
+    safeForward(2)
+    turtle.turnLeft()
+    safeForward()
+    turtle.turnRight()
+    harvestRow(1)
+    turtle.turnLeft()
+    safeForward(2)
+    turtle.turnLeft()
+    safeForward(4)
+    turtle.turnLeft()
+    safeBack()
+end
+
+-- One whole iteration of the farm
+function obsidianFarm()
+    printStatus("obsidianFarm()")
+    generateObsidian()
+    mineObsidian()
+    printStatus("Depositing Harvest...")
+    sleep(10)
+end
+
+--DEBUG--
+function debugMain()
+    printStatus("debugMain()")
+    obsidianFarm()
+end
+
+--MAIN--
+function main()
+    printStatus("main()")
+    while true
+    do
+        obsidianFarm()
+    end
+end
+
+main()
+--debugMain()

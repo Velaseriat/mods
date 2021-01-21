@@ -1,0 +1,251 @@
+----------------------
+-- GLOBAL VARIABLES --
+----------------------
+
+-- Handle Script Arguments
+arg = ...
+bonemealSlot = 2
+
+---------------
+-- FUNCTIONS --
+---------------
+
+-- Safely move in a particular direction
+function safeForward(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.forward() do 
+            if turtle.detect() and shouldBreak
+            then
+                turtle.dig()
+            end
+        end
+    end
+end
+
+-- Move upwards safely
+function safeUp(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.up() do
+            if turtle.detect() and shouldBreak
+            then
+                turtle.digUp()
+            end
+        end
+    end
+end
+
+-- Move down safely
+function safeDown(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.down() do
+            if turtle.detect() and shouldBreak
+            then
+                turtle.digDown()
+            end
+        end
+    end
+end
+
+-- Move backwards safely
+function safeBack(iterations)
+    iterations = iterations or 1
+    for i=1,iterations,1
+    do
+        while not turtle.back() do
+            turtle.turnLeft()
+            turtle.turnLeft()
+            if turtle.detect() and shouldBreak 
+            then
+                turtle.dig()
+            end
+            turtle.turnLeft()
+            turtle.turnLeft()
+        end
+    end
+end
+
+-- Print current status
+function printStatus(status)
+    term.clear()
+    print("Status: " .. status)
+end
+
+-- Grab bonemeal --
+function restockBonemeal()
+    printStatus("restockBonemeal()")
+    for i=2,16,1 do
+        turtle.select(i)
+        turtle.suck(64 - turtle.getItemCount())
+    end
+    turtle.select(2)
+end
+
+-- Restock Saplings --
+function restockResources()
+    printStatus("restockSaplings()")
+    turtle.turnLeft()
+    restockBonemeal()
+    turtle.turnRight()
+    safeForward()
+    turtle.turnLeft()
+    safeForward(2)
+    turtle.turnLeft()
+    turtle.select(1)
+    turtle.suck(64 - turtle.getItemCount())
+    turtle.turnLeft()
+    safeForward(2)
+    turtle.turnLeft()
+    safeBack()
+    bonemealSlot = 2
+end
+
+-- Position for planting --
+function returnToPosition()
+    printStatus("returnToPosition()")
+    safeUp(2)
+    turtle.turnLeft()
+    turtle.turnLeft()
+    safeForward(12)
+    turtle.turnRight()
+    safeForward(3)
+    turtle.turnRight()
+end
+
+-- Go back to start --
+function returnToStart()
+    printStatus("returnToStart()")
+    turtle.turnLeft()
+    safeBack(3)
+    turtle.turnLeft()
+    safeBack(12)
+    turtle.turnRight()
+    turtle.turnRight()
+    safeDown(2)
+end
+
+-- Replant saplings --
+function placeSaplings()
+    printStatus("placeSaplings()")
+    turtle.select(1)
+    safeUp()
+    safeForward()
+    turtle.placeDown()
+    safeForward()
+    turtle.placeDown()
+    turtle.turnRight()
+    safeForward()
+    turtle.placeDown()
+    turtle.turnRight()
+    safeForward()
+    turtle.placeDown()
+    safeForward()
+    turtle.turnRight()
+    safeForward()
+    turtle.turnRight()
+    safeDown()
+end
+
+-- Check if grown --
+function isSapling()
+    printStatus("checkSapling()")
+    success, data = turtle.inspect()
+    return data.name == "minecraft:sapling"
+end
+
+-- Use single bonemeal --
+function useBonemeal()
+    printStatus("useBonemeal()")
+    if bonemealSlot > 16 then
+        returnToStart()
+        restockResources()
+        returnToPosition()
+    end
+    
+    turtle.select(bonemealSlot)
+    if turtle.getItemCount() > 0 then
+        turtle.place()
+    else
+        bonemealSlot = bonemealSlot + 1
+        useBonemeal()
+    end
+    
+end
+
+-- Detect slot is wood --
+function isWood(slot)
+    printStatus("isWood()")
+    data = turtle.getItemDetail(slot)
+    if data ~= nil then
+        return data.name == "minecraft:log"
+    else
+        return false
+    end
+end
+
+-- Drop dug wood --
+function dropWood()
+    printStatus("dropWood()")
+    for i=2,16,1 do
+        if isWood(i) then
+            turtle.select(i)
+            turtle.dropDown()
+        end
+    end
+end
+
+-- Force grow tree --
+function chopTree()
+    printStatus("chopTree()")
+    while isSapling() do
+        useBonemeal()
+    end
+    turtle.dig()
+    dropWood()
+end
+
+-- Plant tree --
+function plantTree()
+    printStatus("plantTree()")
+    turtle.select(1)
+    if turtle.getItemCount() < 5 then
+        returnToStart()
+        restockResources()
+        returnToPosition()
+    end
+    placeSaplings()
+    chopTree()
+end
+
+-- Full farm --
+function jungleTreeFarm()
+    printStatus("jungleTreeFarm()")
+    restockResources()
+    returnToPosition()
+    while true do
+        plantTree()
+    end
+end
+
+--DEBUG--
+function debugMain()
+    printStatus("debugMain()")
+    restockResources()
+    positionForPlanting()
+    placeSaplings()
+    returnToStart()
+end
+
+--MAIN--
+function main()
+    printStatus("main()")
+    jungleTreeFarm()
+end
+
+main()
+--debugMain()
